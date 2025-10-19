@@ -332,6 +332,24 @@
             </div>
         </div>
 
+        <!-- 画面1.5: 音量調整画面 -->
+        <div id="screenVolumeAdjust" class="screen hidden">
+            <div class="waiting-screen">
+                <h2>音量調整</h2>
+                <div class="instruction-box">
+                    <h3>🔊 音量を調整してください</h3>
+                    <p>下のボタンを押してテスト音声を再生し、適切な音量に調整してください。<br>調整が完了したら「調整完了」ボタンを押してください。</p>
+                </div>
+                <audio id="volumeTestAudio" controls style="width: 100%; max-width: 500px; margin: 20px 0;">
+                    <source src="audio/volume_test.wav" type="audio/wav">
+                </audio>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="playVolumeTest()">テスト音声を再生</button>
+                    <button class="btn-primary" onclick="finishVolumeAdjust()">調整完了</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 画面2: 待機画面 -->
         <div id="screen2" class="screen hidden">
             <div class="waiting-screen">
@@ -434,7 +452,7 @@
         // 初期化
         loadQuestionData();
 
-        function startSession(type) {
+        function startSession() {
             const inputSubjectId = document.getElementById('subjectId').value.trim();
             const inputFullName = document.getElementById('fullName').value.trim();
             const inputInitials = document.getElementById('initials').value.trim();
@@ -463,12 +481,11 @@
 
             currentSession = 'adjustment';
             currentTrial = 0;
-
+            
             // questionDataをシャッフル
             questionData = questionData.sort(() => Math.random() - 0.5);
 
-            showScreen('screen2');
-            showWaitingScreen();
+            showScreen('screenVolumeAdjust'); // 音量調整画面へ
         }
 
         function showWaitingScreen() {
@@ -773,6 +790,17 @@
                 return;
             }
 
+            showScreen('screen2');
+            showWaitingScreen();
+        }
+
+        function playVolumeTest() {
+            const volumeTestAudio = document.getElementById('volumeTestAudio');
+            volumeTestAudio.currentTime = 0;
+            volumeTestAudio.play();
+        }
+
+        function finishVolumeAdjust() {
             showScreen('screen2');
             showWaitingScreen();
         }
