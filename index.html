@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音声クイズシステム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .waiting-screen {
+            text-align: center;
+        }
+
+        .waiting-screen h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .audio-player {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .audio-status {
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .quiz-container {
+            margin-top: 30px;
+        }
+
+        .question-block {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .choice-group {
+            margin-left: 10px;
+        }
+
+        .choice-label {
+            display: block;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .choice-label:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .choice-label input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .submit-button-float {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .submit-button-float:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .result-block {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .result-correct {
+            border-left: 4px solid #4caf50;
+        }
+
+        .result-incorrect {
+            border-left: 4px solid #f44336;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .result-icon {
+            font-size: 24px;
+        }
+
+        .answer-detail {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .your-answer {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .correct-answer {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .unnatural-check {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .unnatural-check input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .unnatural-check label {
+            cursor: pointer;
+            color: #856404;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .instruction-box {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .instruction-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .instruction-box p {
+            color: #0d47a1;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .score-summary {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .score-summary h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 画面1: 初期入力画面 -->
+        <div id="screen1" class="screen">
+            <h1>音声クイズシステム</h1>
+            <div class="input-group">
+                <label for="subjectId">被験者ID:</label>
+                <input type="text" id="subjectId" placeholder="例: S001" required>
+            </div>
+            <div class="input-group">
+                <label for="fullName">フルネーム（漢字）:</label>
+                <input type="text" id="fullName" placeholder="例: 山田太郎" required>
+            </div>
+            <div class="input-group">
+                <label for="initials">イニシャル:</label>
+                <input type="text" id="initials" placeholder="例: YT" required>
+            </div>
+            <div class="button-group">
+                <button class="btn-secondary" onclick="startSession('adjustment')">難易度調整セッションに進む</button>
+            </div>
+        </div>
+
+        <!-- 画面2: 待機画面 -->
+        <div id="screen2" class="screen hidden">
+            <div class="waiting-screen">
+                <h2 id="sessionInfo"></h2>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <button class="btn-primary" onclick="startAudio()">準備完了 - 音声を開始</button>
+            </div>
+        </div>
+
+        <!-- 画面3: 音声再生画面 -->
+        <div id="screen3" class="screen hidden">
+            <h1>音声を再生中</h1>
+            <div class="audio-status" id="audioStatus">音声を再生しています...</div>
+            <audio id="audioPlayer" style="display: none;"></audio>
+        </div>
+
+        <!-- 画面4: クイズ画面 -->
+        <div id="screen4" class="screen hidden">
+            <h1>クイズに回答してください</h1>
+            <div id="quizContainer" class="quiz-container"></div>
+            <button class="submit-button-float" onclick="submitQuiz()">回答を送信</button>
+        </div>
+
+        <!-- 画面5: 結果画面 -->
+        <div id="screen5" class="screen hidden">
+            <h1>結果</h1>
+            <div class="score-summary">
+                <h2 id="scoreDisplay"></h2>
+                <p id="scoreDetail"></p>
+            </div>
+            <div class="instruction-box">
+                <h3>⚠ 不自然な箇所の報告</h3>
+                <p>設問や選択肢に不自然な箇所（文法的誤り、意味が通じない表現、不適切な選択肢など）を見つけた場合は、該当する問題のチェックボックスにチェックを入れてください。</p>
+            </div>
+            <div class="instruction-box" style="background: #f5f5f5; border: 2px solid #999;">
+                <h3>📄 音声スクリプト</h3>
+                <p id="scriptText" style="color: #333; white-space: pre-wrap; text-align: left; line-height: 1.8;"></p>
+            </div>
+            <div id="resultsContainer"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn-primary" onclick="nextTrial()">次の試行に進む</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let questionData = [];
+        let subjectData = [];
+        let currentSession = '';
+        let currentTrial = 0;
+        let currentAudioFile = '';
+        let currentQuestions = [];
+        let currentScriptText = '';
+        let userAnswers = {};
+        let unnaturalFlags = {};
+        let subjectId = '';
+        let fullName = '';
+        let initials = '';
+        let trialStartTime = null;
+        
+        // GASのウェブアプリURLをここに設定
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw84dQpxrNfkBA26u-0Uw-XsOonB5XcIycbKIHzcQx7yiCRm5GcvNOhFTraBvdAtdVGDA/exec';
+
+        // JSONデータを読み込む
+        async function loadQuestionData() {
+            try {
+                const response = await fetch('questions.json');
+                questionData = await response.json();
+                
+                // CSVファイルを読み込む
+                const csvResponse = await fetch('subject_data.csv');
+                const csvText = await csvResponse.text();
+                subjectData = parseCSV(csvText);
+            } catch (error) {
+                console.error('データファイルの読み込みに失敗しました:', error);
+                alert('データの読み込みに失敗しました。ファイルを確認してください。');
+            }
+        }
+
+        // CSV解析関数を追加
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                data.push(row);
+            }
+            
+            return data;
+        }
+
+        // 初期化
+        loadQuestionData();
+
+        function startSession(type) {
+            const inputSubjectId = document.getElementById('subjectId').value.trim();
+            const inputFullName = document.getElementById('fullName').value.trim();
+            const inputInitials = document.getElementById('initials').value.trim();
+
+            if (!inputSubjectId || !inputFullName || !inputInitials) {
+                alert('すべての項目を入力してください。');
+                return;
+            }
+
+            // 参加者データと照合
+            const matchedSubject = subjectData.find(subject => 
+                subject.subject_id === inputSubjectId &&
+                subject.name === inputFullName &&
+                subject.initial === inputInitials
+            );
+
+            if (!matchedSubject) {
+                alert('入力された情報が登録されていません。実験実施者に連絡してください。');
+                return;
+            }
+
+            // グローバル変数に保存
+            subjectId = inputSubjectId;
+            fullName = inputFullName;
+            initials = inputInitials;
+
+            currentSession = 'adjustment';
+            currentTrial = 0;
+
+            // questionDataをシャッフル
+            questionData = questionData.sort(() => Math.random() - 0.5);
+
+            showScreen('screen2');
+            showWaitingScreen();
+        }
+
+        function showWaitingScreen() {
+            const totalTrials = questionData.length;
+            const trialNum = currentTrial + 1;
+
+            document.getElementById('sessionInfo').textContent = 
+                `難易度調整セッション ${trialNum}/${totalTrials} 試行を開始します`;
+
+            const progress = (currentTrial / totalTrials) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function startAudio() {
+            if (currentTrial >= questionData.length) {
+                alert('すべての試行が完了しました！');
+                return;
+            }
+
+            // 開始時刻を記録
+            trialStartTime = new Date();
+
+            const trialData = questionData[currentTrial];
+            currentAudioFile = trialData.audio_file;
+            currentQuestions = trialData.questions;
+
+            // スクリプトファイルを読み込む
+            const scriptFileName = currentAudioFile.replace('.wav', '.txt');
+            fetch('scripts/' + scriptFileName)
+                .then(response => response.text())
+                .then(text => {
+                    currentScriptText = text;
+                })
+                .catch(error => {
+                    console.error('スクリプトファイルの読み込みに失敗:', error);
+                    currentScriptText = 'スクリプトの読み込みに失敗しました。';
+                });
+
+            showScreen('screen3');
+
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = 'audio/' + currentAudioFile;
+            audioPlayer.controls = false;
+            audioPlayer.controlsList = 'nodownload noplaybackrate';
+
+            // 再生速度をランダムに設定（1.0または1.5）
+            audioPlayer.playbackRate = Math.random() < 0.5 ? 1.0 : 1.5;
+            
+            // 音声再生
+            audioPlayer.play().catch(e => {
+                console.error('音声再生エラー:', e);
+                alert('音声の再生に失敗しました。ファイルを確認してください。');
+            });
+
+            // 再生終了後にクイズ画面へ
+            audioPlayer.onended = function() {
+                showQuizScreen();
+            };
+
+            // 一時停止や速度変更を防ぐ
+            audioPlayer.onpause = function() {
+                if (!audioPlayer.ended) {
+                    audioPlayer.play();
+                }
+            };
+        }
+
+        function showQuizScreen() {
+            showScreen('screen4');
+            userAnswers = {};
+            unnaturalFlags = {};
+
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = '';
+
+            currentQuestions.forEach((q, index) => {
+                const questionBlock = document.createElement('div');
+                questionBlock.className = 'question-block';
+
+                const questionText = document.createElement('div');
+                questionText.className = 'question-text';
+                questionText.textContent = `問${index + 1}: ${q.text}`;
+                questionBlock.appendChild(questionText);
+
+                const choiceGroup = document.createElement('div');
+                choiceGroup.className = 'choice-group';
+
+                q.choices.forEach((choice, choiceIndex) => {
+                    const label = document.createElement('label');
+                    label.className = 'choice-label';
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = `question${q.id}`;
+                    radio.value = choiceIndex + 1;
+                    radio.onchange = function() {
+                        userAnswers[q.id] = parseInt(this.value);
+                    };
+
+                    label.appendChild(radio);
+                    label.appendChild(document.createTextNode(choice));
+                    choiceGroup.appendChild(label);
+                });
+
+                questionBlock.appendChild(choiceGroup);
+                container.appendChild(questionBlock);
+            });
+        }
+
+        function submitQuiz() {
+            // 全問回答チェック
+            const answeredCount = Object.keys(userAnswers).length;
+            if (answeredCount < currentQuestions.length) {
+                alert(`すべての問題に回答してください。(${answeredCount}/${currentQuestions.length}問回答済み)`);
+                return;
+            }
+
+            showResultsScreen();
+        }
+
+        function showResultsScreen() {
+            showScreen('screen5');
+
+            // 最上部にスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // スクリプトを表示
+            document.getElementById('scriptText').textContent = currentScriptText;
+
+            const trialEndTime = new Date();
+            const totalTimeSec = Math.round((trialEndTime - trialStartTime) / 1000);
+
+            let correctCount = 0;
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = '';
+
+            const questionResults = [];
+
+            currentQuestions.forEach((q, index) => {
+                const userAnswer = userAnswers[q.id];
+                const correctAnswer = q.correct_choice;
+                const isCorrect = userAnswer === correctAnswer;
+
+                if (isCorrect) correctCount++;
+
+                // 質問ごとのデータを収集（後で送信時に使用）
+                questionResults.push({
+                    question_id: q.id,
+                    question_text: q.text,
+                    choices: JSON.stringify(q.choices),
+                    selected_choice: userAnswer,
+                    correct_choice: correctAnswer,
+                    is_correct: isCorrect ? 1 : 0
+                });
+
+                const resultBlock = document.createElement('div');
+                resultBlock.className = `result-block ${isCorrect ? 'result-correct' : 'result-incorrect'}`;
+
+                const resultHeader = document.createElement('div');
+                resultHeader.className = 'result-header';
+                resultHeader.innerHTML = `
+                    <span class="result-icon">${isCorrect ? '✓' : '✗'}</span>
+                    <strong>問${index + 1}: ${q.text}</strong>
+                `;
+                resultBlock.appendChild(resultHeader);
+
+                const answerDetail = document.createElement('div');
+                answerDetail.className = 'answer-detail';
+                answerDetail.innerHTML = `
+                    <div class="your-answer">あなたの回答: ${q.choices[userAnswer - 1]}</div>
+                    ${!isCorrect ? `<div class="correct-answer">正解: ${q.choices[correctAnswer - 1]}</div>` : ''}
+                `;
+                resultBlock.appendChild(answerDetail);
+
+                // 不自然チェックボックスの追加
+                const unnaturalCheck = document.createElement('div');
+                unnaturalCheck.className = 'unnatural-check';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `unnatural_${q.id}`;
+                checkbox.onchange = function() {
+                    unnaturalFlags[q.id] = this.checked ? 1 : 0;
+                };
+                
+                const label = document.createElement('label');
+                label.htmlFor = `unnatural_${q.id}`;
+                label.textContent = '不自然な箇所がある';
+                
+                unnaturalCheck.appendChild(checkbox);
+                unnaturalCheck.appendChild(label);
+                resultBlock.appendChild(unnaturalCheck);
+
+                resultsContainer.appendChild(resultBlock);
+            });
+
+            const accuracyRate = correctCount / currentQuestions.length;
+
+            document.getElementById('scoreDisplay').textContent = 
+                `${correctCount} / ${currentQuestions.length} 問正解`;
+            document.getElementById('scoreDetail').textContent = 
+                `正答率: ${Math.round(accuracyRate * 100)}%`;
+        }
+
+        async function sendToSpreadsheet(startTime, endTime, totalTimeSec, score, questionResults) {
+            const timestamp = new Date().toISOString();
+            const audioId = currentAudioFile.replace('.wav', '');
+
+            // trialシートへのデータ
+            const trialData = {
+                type: 'trial',
+                timestamp: timestamp,
+                subject_id: subjectId,
+                name: fullName,
+                initial: initials,
+                trial_no: currentTrial + 1,
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                total_time_sec: totalTimeSec,
+                audio_id: audioId,
+                playback_speed: document.getElementById('audioPlayer').playbackRate,
+                score: score,
+                total_questions: currentQuestions.length
+            };
+
+            // questionシートへのデータ（is_unnaturalを追加）
+            const questionDataWithFlags = questionResults.map(q => ({
+                ...q,
+                is_unnatural: unnaturalFlags[q.question_id] || 0
+            }));
+
+            const questionData = {
+                type: 'question',
+                timestamp: timestamp,
+                subject_id: subjectId,
+                name: fullName,
+                initial: initials,
+                trial_no: currentTrial + 1,
+                audio_id: audioId,
+                questions: questionDataWithFlags
+            };
+
+            try {
+                // trialデータを送信
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(trialData)
+                });
+
+                // questionデータを送信
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(questionData)
+                });
+
+                console.log('データをスプレッドシートに送信しました');
+            } catch (error) {
+                console.error('データ送信エラー:', error);
+                alert('データの送信に失敗しました。ネットワーク接続を確認してください。');
+            }
+        }
+
+        function nextTrial() {
+            // データ送信を実行（結果画面で設定されたunnaturalFlagsを含む）
+            const trialEndTime = new Date();
+            const totalTimeSec = Math.round((trialEndTime - trialStartTime) / 1000);
+            let correctCount = 0;
+            const questionResults = [];
+
+            currentQuestions.forEach((q) => {
+                const userAnswer = userAnswers[q.id];
+                const correctAnswer = q.correct_choice;
+                const isCorrect = userAnswer === correctAnswer;
+                if (isCorrect) correctCount++;
+
+                questionResults.push({
+                    question_id: q.id,
+                    question_text: q.text,
+                    choices: JSON.stringify(q.choices),
+                    selected_choice: userAnswer,
+                    correct_choice: correctAnswer,
+                    is_correct: isCorrect ? 1 : 0
+                });
+            });
+
+            const accuracyRate = correctCount / currentQuestions.length;
+            sendToSpreadsheet(trialStartTime, trialEndTime, totalTimeSec, accuracyRate, questionResults);
+
+            currentTrial++;
+
+            if (currentTrial >= questionData.length) {
+                alert('すべての試行が完了しました！お疲れ様でした。');
+                location.reload();
+                return;
+            }
+
+            showScreen('screen2');
+            showWaitingScreen();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
