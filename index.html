@@ -49,6 +49,7 @@
         }
 
         input[type="text"],
+        input[type="email"],
         input[type="password"] {
             width: 100%;
             padding: 12px;
@@ -59,6 +60,7 @@
         }
 
         input[type="text"]:focus,
+        input[type="email"]:focus,
         input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
@@ -311,6 +313,26 @@
             margin-bottom: 10px;
         }
     </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDfCE3WftFCm5ZUf3C6IRIn_5iSlp9AUiQ",
+            authDomain: "focuspeed-calibration.firebaseapp.com",
+            projectId: "focuspeed-calibration",
+            storageBucket: "focuspeed-calibration.appspot.com",
+            messagingSenderId: "971154283679",
+            appId: "1:971154283679:web:02b2a94b4b05ca8476d6aa",
+            measurementId: "G-N63LYCLT0C"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        window.auth = auth;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    </script>
 </head>
 <body>
     <div class="container">
@@ -319,7 +341,7 @@
             <h1>音声クイズシステム</h1>
             <div style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
                 <p style="margin: 5px 0;">Amelab UTokyo</p>
-                <p style="margin: 5px 0;">Version 1.4</p>
+                <p style="margin: 5px 0;">Version 1.5</p>
             </div>
             <div class="input-group">
                 <label for="subjectId">被験者ID:</label>
@@ -327,7 +349,7 @@
             </div>
             <div class="input-group">
                 <label for="password">パスワード:</label>
-                <input type="password" id="password" placeholder="実験者から伝えられたパスワードを入力" required>
+                <input type="password" id="password" placeholder="パスワードを入力" required>
             </div>
             <div class="button-group">
                 <button class="btn-secondary" onclick="startSession('adjustment')">難易度調整セッションに進む</button>
@@ -403,7 +425,6 @@
     <script>
         let questionData = [];
         let subjectData = [];
-        let currentSession = '';
         let currentTrial = 0;
         let currentAudioFile = '';
         let currentQuestions = [];
@@ -454,41 +475,66 @@
         // 初期化
         loadQuestionData();
 
-        function startSession() {
-            const inputSubjectId = document.getElementById('subjectId').value.trim();
+        async function startSession() {
+            const inputId = document.getElementById('subjectId').value.trim();
             const inputPassword = document.getElementById('password').value.trim();
 
-            if (!inputSubjectId || !inputPassword) {
+            if (!inputId || !inputPassword) {
                 alert('すべての項目を入力してください。');
                 return;
             }
 
-            // パスワード認証
-            if (inputPassword !== 'amelabexp') {
-                alert('パスワードが正しくありません。');
+            // IDからメール形式を生成
+            const inputEmail = `${inputId}@example.com`;
+
+
+            if (!inputEmail || !inputPassword) {
+                alert('すべての項目を入力してください。');
                 return;
             }
 
-            // 参加者データと照合
-            const matchedSubject = subjectData.find(subject => 
-                subject.subject_id === inputSubjectId
-            );
+            try {
+                // Firebase Authenticationで認証
+                const userCredential = await signInWithEmailAndPassword(auth, inputEmail, inputPassword);
+                const user = userCredential.user;
+                
+                // メールアドレスから被験者IDを抽出（@より前の部分）
+                subjectId = user.email.split('@')[0];
 
-            if (!matchedSubject) {
-                alert('入力された情報が登録されていません。実験実施者に連絡してください。');
-                return;
+                currentTrial = 0;
+                
+                // questionDataをシャッフル
+                questionData = questionData.sort(() => Math.random() - 0.5);
+
+                showScreen('screenVolumeAdjust'); // 音量調整画面へ
+                
+            } catch (error) {
+                console.error('認証エラー:', error);
+                let errorMessage = '認証に失敗しました。';
+                
+                // エラーの種類に応じたメッセージ
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage = 'メールアドレスの形式が正しくありません。';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage = 'ユーザーが見つかりません。';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'パスワードが正しくありません。';
+                        break;
+                    case 'auth/invalid-credential':
+                        errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = '認証の試行回数が多すぎます。しばらく待ってから再度お試しください。';
+                        break;
+                    default:
+                        errorMessage = `認証エラー: ${error.message}`;
+                }
+                
+                alert(errorMessage);
             }
-
-            // グローバル変数に保存
-            subjectId = inputSubjectId;
-
-            currentSession = 'adjustment';
-            currentTrial = 0;
-            
-            // questionDataをシャッフル
-            questionData = questionData.sort(() => Math.random() - 0.5);
-
-            showScreen('screenVolumeAdjust'); // 音量調整画面へ
         }
 
         function showWaitingScreen() {
