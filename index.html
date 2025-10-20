@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>音声クイズシステム</title>
+    <link rel="icon" href="favicon.png" type="image/png">
     <style>
         * {
             margin: 0;
@@ -443,11 +444,6 @@
             try {
                 const response = await fetch('questions.json');
                 questionData = await response.json();
-                
-                // CSVファイルを読み込む
-                const csvResponse = await fetch('subject_data.csv');
-                const csvText = await csvResponse.text();
-                subjectData = parseCSV(csvText);
             } catch (error) {
                 console.error('データファイルの読み込みに失敗しました:', error);
                 alert('データの読み込みに失敗しました。ファイルを確認してください。');
