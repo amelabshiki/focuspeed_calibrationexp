@@ -499,7 +499,7 @@
                 const user = userCredential.user;
                 
                 // メールアドレスから被験者IDを抽出（@より前の部分）
-                subjectId = user.email.split('@')[0];
+                subjectId = user.email.split('@')[0].toUpperCase();
 
                 currentTrial = 0;
                 
