@@ -317,19 +317,15 @@
             <h1>音声クイズシステム</h1>
             <div style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
                 <p style="margin: 5px 0;">Amelab UTokyo</p>
-                <p style="margin: 5px 0;">Version 1.3</p>
+                <p style="margin: 5px 0;">Version 1.4</p>
             </div>
             <div class="input-group">
                 <label for="subjectId">被験者ID:</label>
                 <input type="text" id="subjectId" placeholder="例: S001" required>
             </div>
             <div class="input-group">
-                <label for="fullName">フルネーム（漢字）:</label>
-                <input type="text" id="fullName" placeholder="例: 山田太郎" required>
-            </div>
-            <div class="input-group">
-                <label for="initials">イニシャル（名→姓の順）:</label>
-                <input type="text" id="initials" placeholder="例: TY" required>
+                <label for="password">パスワード:</label>
+                <input type="password" id="password" placeholder="実験者から伝えられたパスワードを入力" required>
             </div>
             <div class="button-group">
                 <button class="btn-secondary" onclick="startSession('adjustment')">難易度調整セッションに進む</button>
@@ -413,8 +409,6 @@
         let userAnswers = {};
         let unnaturalFlags = {};
         let subjectId = '';
-        let fullName = '';
-        let initials = '';
         let trialStartTime = null;
         let trialEndTime = null;
         
@@ -460,19 +454,22 @@
 
         function startSession() {
             const inputSubjectId = document.getElementById('subjectId').value.trim();
-            const inputFullName = document.getElementById('fullName').value.trim();
-            const inputInitials = document.getElementById('initials').value.trim();
+            const inputPassword = document.getElementById('password').value.trim();
 
-            if (!inputSubjectId || !inputFullName || !inputInitials) {
+            if (!inputSubjectId || !inputPassword) {
                 alert('すべての項目を入力してください。');
+                return;
+            }
+
+            // パスワード認証
+            if (inputPassword !== 'amelabexp') {
+                alert('パスワードが正しくありません。');
                 return;
             }
 
             // 参加者データと照合
             const matchedSubject = subjectData.find(subject => 
-                subject.subject_id === inputSubjectId &&
-                subject.name === inputFullName &&
-                subject.initial === inputInitials
+                subject.subject_id === inputSubjectId
             );
 
             if (!matchedSubject) {
@@ -482,8 +479,6 @@
 
             // グローバル変数に保存
             subjectId = inputSubjectId;
-            fullName = inputFullName;
-            initials = inputInitials;
 
             currentSession = 'adjustment';
             currentTrial = 0;
@@ -716,8 +711,6 @@
                 type: 'trial',
                 timestamp: timestamp,
                 subject_id: subjectId,
-                name: fullName,
-                initial: initials,
                 trial_no: currentTrial + 1,
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
@@ -738,8 +731,6 @@
                 type: 'question',
                 timestamp: timestamp,
                 subject_id: subjectId,
-                name: fullName,
-                initial: initials,
                 trial_no: currentTrial + 1,
                 audio_id: audioId,
                 questions: questionDataWithFlags
