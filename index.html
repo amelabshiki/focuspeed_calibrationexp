@@ -193,6 +193,49 @@
             box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
         }
 
+        .concentration-option {
+            cursor: pointer;
+        }
+
+        .concentration-option input[type="radio"] {
+            display: none;
+        }
+
+        .concentration-label {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #666;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .concentration-label small {
+            font-size: 12px;
+            font-weight: 400;
+            margin-top: 5px;
+        }
+
+        .concentration-option input[type="radio"]:checked + .concentration-label {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .concentration-option:hover .concentration-label {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
         .result-block {
             background: #f9f9f9;
             padding: 20px;
@@ -313,6 +356,21 @@
             font-size: 32px;
             margin-bottom: 10px;
         }
+
+        .loading-spinner {
+            margin: 40px auto;
+            width: 60px;
+            height: 60px;
+            border: 6px solid #e0e0e0;
+            border-top: 6px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
@@ -342,7 +400,7 @@
             <h1>音声クイズシステム</h1>
             <div style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
                 <p style="margin: 5px 0;">Amelab UTokyo</p>
-                <p style="margin: 5px 0;">Version 1.5</p>
+                <p style="margin: 5px 0;">Version 1.6</p>
             </div>
             <div class="input-group">
                 <label for="subjectId">被験者ID:</label>
@@ -353,7 +411,7 @@
                 <input type="password" id="password" placeholder="パスワードを入力" required>
             </div>
             <div class="button-group">
-                <button class="btn-secondary" onclick="startSession('adjustment')">難易度調整セッションに進む</button>
+                <button class="btn-secondary" onclick="startSession('adjustment')">音声聞き取り実験に進む</button>
             </div>
         </div>
 
@@ -375,6 +433,26 @@
             </div>
         </div>
 
+        <!-- 画面1.7: 指示文画面 -->
+        <div id="screenInstruction" class="screen hidden">
+            <div class="waiting-screen">
+                <h2>実験の流れ</h2>
+                <div class="instruction-box" style="background: #e8f5e9; border: 2px solid #4caf50;">
+                    <h3>📋 ご案内</h3>
+                    <p style="font-size: 18px; line-height: 2;">
+                        これから音声が流れます。<br>
+                        続いて、音声の内容に関するクイズと集中度の自己評価に回答してください。<br>
+                        クイズへの回答（「回答を送信」ボタンを押すまで）は可能な限り早く、かつ正確に行ってください。<br>
+                        実験全体としてはこれが10回繰り返されますが、途中で中断することも可能です。<br>
+                        ただし、その場合はその時点までで回答送信が完了している試行分のみの謝金のお支払いとなりますので，ご了承ください。<br>
+                    </p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn-primary" onclick="startFromInstruction()">上記に同意して開始する</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 画面2: 待機画面 -->
         <div id="screen2" class="screen hidden">
             <div class="waiting-screen">
@@ -383,6 +461,7 @@
                     <div id="progressFill" class="progress-fill" style="width: 0%"></div>
                 </div>
                 <button class="btn-primary" onclick="startAudio()">準備完了 - 音声を開始</button>
+                <button class="btn-secondary" onclick="interruptExperiment()" style="margin-top: 15px;">実験を中断する</button>
             </div>
         </div>
 
@@ -391,6 +470,9 @@
             <h1>音声を再生中</h1>
             <div class="audio-status" id="audioStatus">音声を再生しています...</div>
             <audio id="audioPlayer" style="display: none;"></audio>
+            <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
+                <a href="https://ondoku3.com/ja/" target="_blank" style="color: #667eea; text-decoration: none;">Voice By ondoku3.com</a>
+            </div>
         </div>
 
         <!-- 画面4: クイズ画面 -->
@@ -398,6 +480,45 @@
             <h1>クイズに回答してください</h1>
             <div id="quizContainer" class="quiz-container"></div>
             <button class="submit-button-float" onclick="submitQuiz()">回答を送信</button>
+        </div>
+
+        <!-- 画面4.5: 集中度自己評価画面 -->
+        <div id="screenConcentration" class="screen hidden">
+            <h1>集中度の自己評価</h1>
+            <div class="instruction-box">
+                <h3>音声を聞いている間の集中度を評価してください</h3>
+                <p>1（全く集中できなかった）から5（とても集中できた）までの5段階で評価してください。</p>
+            </div>
+            <div style="margin: 40px 0; text-align: center;">
+                <div style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 30px;">
+                    集中度を選択してください
+                </div>
+                <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                    <label class="concentration-option">
+                        <input type="radio" name="concentration" value="1">
+                        <span class="concentration-label">1<br><small>全く集中できなかった</small></span>
+                    </label>
+                    <label class="concentration-option">
+                        <input type="radio" name="concentration" value="2">
+                        <span class="concentration-label">2<br><small>あまり集中できなかった</small></span>
+                    </label>
+                    <label class="concentration-option">
+                        <input type="radio" name="concentration" value="3">
+                        <span class="concentration-label">3<br><small>普通</small></span>
+                    </label>
+                    <label class="concentration-option">
+                        <input type="radio" name="concentration" value="4">
+                        <span class="concentration-label">4<br><small>やや集中できた</small></span>
+                    </label>
+                    <label class="concentration-option">
+                        <input type="radio" name="concentration" value="5">
+                        <span class="concentration-label">5<br><small>とても集中できた</small></span>
+                    </label>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 40px;">
+                <button class="btn-primary" onclick="submitConcentration()">次へ進む</button>
+            </div>
         </div>
 
         <!-- 画面5: 結果画面 -->
@@ -421,6 +542,46 @@
                 <button id="finishExperimentButton" class="btn-primary hidden" onclick="finishExperiment()">実験を終了する</button>
             </div>
         </div>
+
+        <!-- 画面6: データ送信中画面 -->
+        <div id="screenSaving" class="screen hidden">
+            <div class="waiting-screen">
+                <h2>処理中...</h2>
+                <div class="instruction-box" style="background: #fff3e0; border: 2px solid #ff9800;">
+                    <h3>⚠️ 重要</h3>
+                    <p style="font-size: 18px;">
+                        処理を実行しています。<br>
+                        ウィンドウを閉じないでください。
+                    </p>
+                </div>
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- 画面7: 実験終了画面 -->
+        <div id="screenComplete" class="screen hidden">
+            <div class="waiting-screen">
+                <h2>実験が終了しました</h2>
+                <div class="instruction-box" style="background: #e8f5e9; border: 2px solid #4caf50;">
+                    <h3>✅ お疲れ様でした</h3>
+                    <p style="font-size: 18px; line-height: 2;">
+                        お忙しい中ご協力いただき、ありがとうございました。<br>
+                        以下のリンクから実験終了のフォームを送信してください。<br>
+                        フォームの送信が完了しましたら、画面を閉じていただいて大丈夫です。
+                    </p>
+                    <div style="margin-top: 30px;">
+                        <a href="https://forms.gle/d6AFQptZFiy2DnR98" target="_blank" 
+                        style="display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; text-decoration: none; border-radius: 10px; font-size: 18px; font-weight: 600; 
+                        transition: transform 0.3s, box-shadow 0.3s;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(0,0,0,0.2)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            📝 実験終了フォームを開く
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -430,6 +591,7 @@
         let currentAudioFile = '';
         let currentQuestions = [];
         let currentScriptText = '';
+        let concentrationRating = null;
         let userAnswers = {};
         let unnaturalFlags = {};
         let subjectId = '';
@@ -538,7 +700,7 @@
             const trialNum = currentTrial + 1;
 
             document.getElementById('sessionInfo').textContent = 
-                `難易度調整セッション ${trialNum}/${totalTrials} 試行を開始します`;
+                `音声聞き取り実験 ${trialNum}/${totalTrials} 試行を開始します`;
 
             const progress = (currentTrial / totalTrials) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
@@ -651,6 +813,28 @@
             // 終了時刻を記録
             trialEndTime = new Date();
 
+            // 集中度評価画面へ遷移
+            showConcentrationScreen();
+        }
+
+        function showConcentrationScreen() {
+            showScreen('screenConcentration');
+            concentrationRating = null;
+            // ラジオボタンの選択をリセット
+            document.querySelectorAll('input[name="concentration"]').forEach(radio => {
+                radio.checked = false;
+            });
+            // 最上部にスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function submitConcentration() {
+            const selectedRating = document.querySelector('input[name="concentration"]:checked');
+            if (!selectedRating) {
+                alert('集中度を選択してください。');
+                return;
+            }
+            concentrationRating = parseInt(selectedRating.value);
             showResultsScreen();
         }
 
@@ -762,7 +946,8 @@
                 audio_id: audioId,
                 playback_speed: document.getElementById('audioPlayer').playbackRate,
                 score: score,
-                total_questions: currentQuestions.length
+                total_questions: currentQuestions.length,
+                concentration_rating: concentrationRating
             };
 
             // questionシートへのデータ（is_unnaturalを追加）
@@ -835,13 +1020,15 @@
 
             currentTrial++;
 
+            // 2回目以降は指示文画面をスキップして直接待機画面へ
             showScreen('screen2');
             showWaitingScreen();
         }
 
         async function finishExperiment() {
-            // ローディング表示
-            alert('回答データを保存しています。最初の画面に自動遷移するまでウィンドウを閉じないでください...');
+            // データ送信中画面を表示
+            showScreen('screenSaving');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
             // データ送信を実行
             const totalTimeSec = Math.round((trialEndTime - trialStartTime) / 1000);
@@ -869,8 +1056,26 @@
             // データ送信完了を待つ
             await sendToSpreadsheet(trialStartTime, trialEndTime, totalTimeSec, accuracyRate, questionResults);
 
-            alert('すべての試行が完了しました!お疲れ様でした。');
-            location.reload();
+            // 実験終了画面を表示
+            showScreen('screenComplete');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function interruptExperiment() {
+            if (!confirm('実験を中断しますか？\n\nこれまでに回答送信が完了した試行分のみの謝礼のお支払いとなります。')) {
+                return;
+            }
+
+            // データ送信中画面を表示
+            showScreen('screenSaving');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // 少し待機してから終了画面へ（データ送信処理は既に各試行後に完了しているため）
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // 実験終了画面を表示
+            showScreen('screenComplete');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function playVolumeTest() {
@@ -880,6 +1085,11 @@
         }
 
         function finishVolumeAdjust() {
+            // 指示文画面へ遷移
+            showScreen('screenInstruction');
+        }
+
+        function startFromInstruction() {
             showScreen('screen2');
             showWaitingScreen();
         }
