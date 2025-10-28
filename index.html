@@ -673,7 +673,7 @@
                 // エラーの種類に応じたメッセージ
                 switch (error.code) {
                     case 'auth/invalid-email':
-                        errorMessage = 'メールアドレスの形式が正しくありません。';
+                        errorMessage = '被験者IDの形式が正しくありません。';
                         break;
                     case 'auth/user-not-found':
                         errorMessage = 'ユーザーが見つかりません。';
@@ -682,7 +682,7 @@
                         errorMessage = 'パスワードが正しくありません。';
                         break;
                     case 'auth/invalid-credential':
-                        errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+                        errorMessage = '被験者IDまたはパスワードが正しくありません。';
                         break;
                     case 'auth/too-many-requests':
                         errorMessage = '認証の試行回数が多すぎます。しばらく待ってから再度お試しください。';
