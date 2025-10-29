@@ -400,7 +400,7 @@
             <h1>音声クイズシステム</h1>
             <div style="text-align: center; margin-bottom: 20px; color: #666; font-size: 14px;">
                 <p style="margin: 5px 0;">Amelab UTokyo</p>
-                <p style="margin: 5px 0;">Version 1.6</p>
+                <p style="margin: 5px 0;">Version 1.7</p>
             </div>
             <div class="input-group">
                 <label for="subjectId">被験者ID:</label>
@@ -656,13 +656,74 @@
                 const userCredential = await signInWithEmailAndPassword(auth, inputEmail, inputPassword);
                 const user = userCredential.user;
                 
-                // メールアドレスから被験者IDを抽出（@より前の部分）
+                // メールアドレスから被験者IDを抽出(@より前の部分)
                 subjectId = user.email.split('@')[0].toUpperCase();
 
                 currentTrial = 0;
-                
-                // questionDataをシャッフル
-                questionData = questionData.sort(() => Math.random() - 0.5);
+
+                // 当該被験者の条件データのみを読み込む
+                try {
+                    const response = await fetch('conditions.csv');
+                    const text = await response.text();
+                    const lines = text.trim().split('\n');
+                    const headers = lines[0].split(',');
+                    
+                    // 当該被験者のデータを探す
+                    let subjectCondition = null;
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line === '') continue; // 空行をスキップ
+                        
+                        const values = line.split(',');
+                        const csvSubjectId = values[0] ? values[0].trim() : '';
+                        
+                        if (csvSubjectId === subjectId) {
+                            subjectCondition = {};
+                            for (let j = 1; j < headers.length && j < values.length; j++) {
+                                const audioId = headers[j].trim();
+                                const value = values[j] ? values[j].trim() : '';
+                                // 空欄または数値として無効な場合はundefinedを設定
+                                subjectCondition[audioId] = (value === '' || isNaN(parseFloat(value))) ? undefined : parseFloat(value);
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (!subjectCondition) {
+                        console.warn(`被験者${subjectId}の条件が見つかりません`);
+                        alert(`被験者ID「${subjectId}」の実験条件が登録されていません。\n\n実験者に連絡して、条件設定を確認してもらってください。`);
+                        return;
+                    }
+                    
+                    // 被験者の条件に基づいて実施する音声をフィルタリング
+                    questionData = questionData.filter(trial => {
+                        const audioId = trial.audio_file.replace('.wav', '');
+                        const speed = subjectCondition[audioId];
+                        // 再生速度が数値として有効な場合のみ含める
+                        return !isNaN(speed) && speed !== undefined && speed !== null;
+                    });
+                    
+                    // フィルタリング後にシャッフル
+                    questionData = questionData.sort(() => Math.random() - 0.5);
+                    
+                    if (questionData.length === 0) {
+                        alert('実施する音声がありません。条件設定を確認してください。\n実験者に連絡してください。');
+                        return;
+                    }
+                    
+                    console.log(`${subjectId}の実施音声数: ${questionData.length}`);
+                    
+                    // 条件データをグローバルに保存（後で使用）
+                    window.currentSubjectCondition = subjectCondition;
+
+                    // 指示文の試行回数を保存
+                    window.totalTrialsForInstruction = questionData.length;
+                    
+                } catch (error) {
+                    console.error('条件データの読み込みに失敗:', error);
+                    alert('条件データの読み込みに失敗しました。実験者に連絡してください。');
+                    return;
+                }
 
                 showScreen('screenVolumeAdjust'); // 音量調整画面へ
                 
@@ -738,8 +799,15 @@
             audioPlayer.controls = false;
             audioPlayer.controlsList = 'nodownload noplaybackrate';
 
-            // 再生速度をランダムに設定（1.0または1.5）
-            audioPlayer.playbackRate = Math.random() < 0.5 ? 1.0 : 1.5;
+            // 条件に基づいて再生速度を設定
+            const audioId = currentAudioFile.replace('.wav', '');
+            if (window.currentSubjectCondition && window.currentSubjectCondition[audioId]) {
+                audioPlayer.playbackRate = window.currentSubjectCondition[audioId];
+                console.log(`${subjectId} - ${audioId}: 再生速度 ${audioPlayer.playbackRate}x`);
+            } else {
+                console.warn(`条件が見つかりません: ${subjectId} - ${audioId}, デフォルト1.0xを使用`);
+                audioPlayer.playbackRate = 1.0;
+            }
             
             // 音声再生
             audioPlayer.play().catch(e => {
@@ -1087,6 +1155,11 @@
         function finishVolumeAdjust() {
             // 指示文画面へ遷移
             showScreen('screenInstruction');
+            // 試行回数を動的に更新
+            if (window.totalTrialsForInstruction) {
+                const instructionText = document.querySelector('#screenInstruction .instruction-box p');
+                instructionText.innerHTML = instructionText.innerHTML.replace('10回', `${window.totalTrialsForInstruction}回`);
+            }
         }
 
         function startFromInstruction() {
