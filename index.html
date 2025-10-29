@@ -1062,16 +1062,23 @@
         }
 
         function nextTrial() {
-            // データ送信を実行（結果画面で設定されたunnaturalFlagsを含む）
+            // データ送信を実行(結果画面で設定されたunnaturalFlagsを含む)
             const totalTimeSec = Math.round((trialEndTime - trialStartTime) / 1000);
             let correctCount = 0;
+            let correctCountForScore = 0;  // check以外の正解数
             const questionResults = [];
 
             currentQuestions.forEach((q) => {
                 const userAnswer = userAnswers[q.id];
                 const correctAnswer = q.correct_choice;
                 const isCorrect = userAnswer === correctAnswer;
-                if (isCorrect) correctCount++;
+                if (isCorrect) {
+                    correctCount++;
+                    // question_idに"check"が含まれない場合のみカウント
+                    if (!q.id.includes('check')) {
+                        correctCountForScore++;
+                    }
+                }
 
                 questionResults.push({
                     question_id: q.id,
@@ -1083,7 +1090,9 @@
                 });
             });
 
-            const accuracyRate = correctCount / currentQuestions.length;
+            // checkを除いた問題数でスコアを計算
+            const questionsForScore = currentQuestions.filter(q => !q.id.includes('check')).length;
+            const accuracyRate = correctCountForScore / questionsForScore;
             sendToSpreadsheet(trialStartTime, trialEndTime, totalTimeSec, accuracyRate, questionResults);
 
             currentTrial++;
@@ -1101,13 +1110,20 @@
             // データ送信を実行
             const totalTimeSec = Math.round((trialEndTime - trialStartTime) / 1000);
             let correctCount = 0;
+            let correctCountForScore = 0;  // check以外の正解数
             const questionResults = [];
 
             currentQuestions.forEach((q) => {
                 const userAnswer = userAnswers[q.id];
                 const correctAnswer = q.correct_choice;
                 const isCorrect = userAnswer === correctAnswer;
-                if (isCorrect) correctCount++;
+                if (isCorrect) {
+                    correctCount++;
+                    // question_idに"check"が含まれない場合のみカウント
+                    if (!q.id.includes('check')) {
+                        correctCountForScore++;
+                    }
+                }
 
                 questionResults.push({
                     question_id: q.id,
@@ -1119,7 +1135,9 @@
                 });
             });
 
-            const accuracyRate = correctCount / currentQuestions.length;
+            // checkを除いた問題数でスコアを計算
+            const questionsForScore = currentQuestions.filter(q => !q.id.includes('check')).length;
+            const accuracyRate = correctCountForScore / questionsForScore;
             
             // データ送信完了を待つ
             await sendToSpreadsheet(trialStartTime, trialEndTime, totalTimeSec, accuracyRate, questionResults);
